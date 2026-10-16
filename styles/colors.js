@@ -11,4 +11,9 @@ export const colors = {
   error: '#E53935',
   success: '#2E7D32',
   divider: '#E0E0E0',
+
+  purple: '#6C4CF1',
+  yellow: '#FFC107',
+  green: '#2E7D32',
+  blue: '#1E88E5',
 };

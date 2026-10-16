@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "test",
-    "slug": "test",
+    "name": "YorWorde-txt",
+    "slug": "yorworde-txt",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
