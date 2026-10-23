@@ -6,14 +6,16 @@ import {
   StatusBar,
   TouchableOpacity,
   Alert,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '../styles/colors';
 import { logout } from '../storage/userStorage';
 import { clearAllData } from '../db/database';
+import { useTheme } from '../styles/ThemeContext'; // Новый путь импорта
 
-export default function SettingsScreen({ onLogout }) {
-  
+export default function SettingsScreen({ onLogout, navigation }) {
+  const { isDark, toggleTheme, colors } = useTheme();
+
   const handleClearData = () => {
     Alert.alert(
       'Удалить все данные?',
@@ -51,16 +53,30 @@ export default function SettingsScreen({ onLogout }) {
     ]);
   };
 
+  const styles = createStyles(colors);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
       
       <View style={styles.header}>
         <Text style={styles.title}>Настройки</Text>
       </View>
 
       <View style={styles.content}>
-        {/* Секция: Данные */}
+        <Text style={styles.sectionTitle}>Внешний вид</Text>
+        <View style={styles.card}>
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Тёмная тема</Text>
+            <Switch
+              value={isDark}
+              onValueChange={toggleTheme}
+              trackColor={{ false: colors.divider, true: colors.primary }}
+              thumbColor={'#fff'}
+            />
+          </View>
+        </View>
+
         <Text style={styles.sectionTitle}>Данные</Text>
         <View style={styles.card}>
           <TouchableOpacity style={styles.row} onPress={handleClearData}>
@@ -70,7 +86,6 @@ export default function SettingsScreen({ onLogout }) {
           </TouchableOpacity>
         </View>
 
-        {/* Секция: Аккаунт */}
         <Text style={styles.sectionTitle}>Аккаунт</Text>
         <View style={styles.card}>
           <TouchableOpacity style={styles.row} onPress={handleLogout}>
@@ -78,27 +93,23 @@ export default function SettingsScreen({ onLogout }) {
           </TouchableOpacity>
         </View>
         
-        <Text style={styles.version}>YorWorde-txt v1.0.0</Text>
+        <TouchableOpacity 
+          style={styles.versionWrapper} 
+          onPress={() => navigation.navigate('Gallery')}
+          activeOpacity={0.6}
+        >
+          <Text style={styles.version}>YorWorde-txt v1.0.0</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-  },
-  content: {
-    paddingHorizontal: 20,
-  },
+  header: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 10 },
+  title: { fontSize: 28, fontWeight: 'bold', color: colors.textPrimary },
+  content: { paddingHorizontal: 20 },
   sectionTitle: {
     fontSize: 13,
     fontWeight: '600',
@@ -122,14 +133,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
   },
-  rowLabel: {
-    fontSize: 16,
-    color: colors.textPrimary,
-  },
-  version: {
-    textAlign: 'center',
-    fontSize: 12,
-    color: colors.textDisabled,
-    marginTop: 30,
-  },
+  rowLabel: { fontSize: 16, color: colors.textPrimary },
+  versionWrapper: { marginTop: 30, alignItems: 'center', paddingVertical: 10 },
+  version: { fontSize: 12, color: colors.textDisabled },
 });

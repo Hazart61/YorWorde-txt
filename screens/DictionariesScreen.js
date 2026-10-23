@@ -10,7 +10,7 @@ export default function DictionariesScreen() {
       <View style={styles.center}>
         <Text style={styles.title}>Словари</Text>
         <Text style={styles.text}>
-          Здесь будут публичные словари других пользователей.
+          ОДнаЖЖЖЖДыыы
         </Text>
       </View>
     </SafeAreaView>

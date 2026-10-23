@@ -9,10 +9,13 @@ import RegisterScreen from './screens/RegisterScreen';
 import MainTabsScreen from './screens/MainTabsScreen';
 import WordsScreen from './screens/WordsScreen';
 import AddWordScreen from './screens/AddWordScreen';
-import CreateDictionaryScreen from './screens/CreateDictionaryScreen'; // Проверьте этот импорт
+import CreateDictionaryScreen from './screens/CreateDictionaryScreen';
+import GalleryScreen from './screens/GalleryScreen';
+import CharacterDetailScreen from './screens/CharacterDetailScreen';
 
 import { initDatabase } from './db/database';
 import { colors } from './styles/colors';
+import { ThemeProvider } from './styles/ThemeContext'; // Новый путь импорта
 
 const Stack = createNativeStackNavigator();
 
@@ -42,27 +45,25 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <NavigationContainer>
-        <Stack.Navigator
-          initialRouteName="Login"
-          screenOptions={{ headerShown: false }}
-        >
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Register" component={RegisterScreen} />
-          <Stack.Screen name="MainTabs" component={MainTabsScreen} />
-          <Stack.Screen name="Words" component={WordsScreen} />
-          <Stack.Screen name="AddWord" component={AddWordScreen} />
-          
-          {/* Экран должен быть зарегистрирован именно так */}
-          <Stack.Screen
-            name="CreateDictionary"
-            component={CreateDictionaryScreen}
-          />
-          
-        </Stack.Navigator>
-      </NavigationContainer>
-    </SafeAreaProvider>
+    <ThemeProvider>
+      <SafeAreaProvider>
+        <NavigationContainer>
+          <Stack.Navigator
+            initialRouteName="Login"
+            screenOptions={{ headerShown: false }}
+          >
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
+            <Stack.Screen name="MainTabs" component={MainTabsScreen} />
+            <Stack.Screen name="Words" component={WordsScreen} />
+            <Stack.Screen name="AddWord" component={AddWordScreen} />
+            <Stack.Screen name="CreateDictionary" component={CreateDictionaryScreen} />
+            <Stack.Screen name="Gallery" component={GalleryScreen} />
+            <Stack.Screen name="CharacterDetail" component={CharacterDetailScreen} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </SafeAreaProvider>
+    </ThemeProvider>
   );
 }
 
@@ -74,8 +75,3 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
 });
-
-
-
-
-

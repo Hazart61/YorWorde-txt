@@ -38,7 +38,7 @@ export default function MainTabsScreen({ route, navigation }) {
       case 'profile':
         return <ProfileScreen userName={userName} userEmail={userEmail} />;
       case 'settings':
-        return <SettingsScreen onLogout={handleLogout} />;
+        return <SettingsScreen onLogout={handleLogout} navigation={navigation} />;
       default:
         return null;
     }

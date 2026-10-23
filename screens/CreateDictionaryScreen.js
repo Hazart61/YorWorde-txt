@@ -13,25 +13,26 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '../styles/colors';
+import { useTheme } from '../styles/ThemeContext';
 import { addDictionary, addWord } from '../db/database';
 
-const COLORS = [
-  { id: 'purple', value: colors.purple, name: 'Фиолетовый' },
-  { id: 'yellow', value: colors.yellow, name: 'Жёлтый' },
-  { id: 'green', value: '#2E7D32', name: 'Зелёный' },
-  { id: 'blue', value: colors.blue, name: 'Синий' },
-  { id: 'red', value: colors.error, name: 'Красный' },
-  { id: 'pink', value: '#EC407A', name: 'Розовый' },
-];
-
 export default function CreateDictionaryScreen({ navigation }) {
+  const { isDark, colors } = useTheme();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [firstWord, setFirstWord] = useState('');
   const [firstWordDesc, setFirstWordDesc] = useState('');
-  const [selectedColor, setSelectedColor] = useState(COLORS[0].value);
+  const [selectedColor, setSelectedColor] = useState(colors.primary);
   const [saving, setSaving] = useState(false);
+
+  const COLORS = [
+    { id: 'purple', value: colors.purple, name: 'Фиолетовый' },
+    { id: 'yellow', value: colors.yellow, name: 'Жёлтый' },
+    { id: 'green', value: colors.green, name: 'Зелёный' },
+    { id: 'blue', value: colors.blue, name: 'Синий' },
+    { id: 'red', value: colors.error, name: 'Красный' },
+    { id: 'pink', value: '#EC407A', name: 'Розовый' },
+  ];
 
   const handleSave = async () => {
     const trimmedTitle = title.trim();
@@ -71,9 +72,11 @@ export default function CreateDictionaryScreen({ navigation }) {
     }
   };
 
+  const styles = createStyles(colors);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -157,12 +160,10 @@ export default function CreateDictionaryScreen({ navigation }) {
               onChangeText={setFirstWordDesc}
             />
             
-            {/* Отступ, чтобы контент не перекрывался кнопками */}
             <View style={{ height: 100 }} />
           </View>
         </ScrollView>
 
-        {/* Блок с кнопками, закрепленный внизу */}
         <View style={styles.footer}>
           <TouchableOpacity
             style={[styles.primaryBtn, saving && styles.primaryBtnDisabled]}
@@ -191,7 +192,7 @@ export default function CreateDictionaryScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   scrollContent: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 20 },
 
@@ -250,7 +251,6 @@ const styles = StyleSheet.create({
     marginVertical: 20,
   },
 
-  // Нижняя панель с кнопками
   footer: {
     paddingHorizontal: 24,
     paddingTop: 12,

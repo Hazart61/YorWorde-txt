@@ -12,10 +12,11 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '../styles/colors';
+import { useTheme } from '../styles/ThemeContext';
 import { addWord } from '../db/database';
 
 export default function AddWordScreen({ navigation, route }) {
+  const { isDark, colors } = useTheme();
   const [word, setWord] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
@@ -50,9 +51,11 @@ export default function AddWordScreen({ navigation, route }) {
     }
   };
 
+  const styles = createStyles(colors);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -145,7 +148,7 @@ export default function AddWordScreen({ navigation, route }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   scrollContent: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 40 },
 

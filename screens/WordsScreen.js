@@ -12,10 +12,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors } from '../styles/colors';
+import { useTheme } from '../styles/ThemeContext';
 import { getWordsByDictionary, deleteWord } from '../db/database';
 
 export default function WordsScreen({ route, navigation }) {
+  const { isDark, colors } = useTheme();
   const dictionaryId = route.params?.dictionaryId;
   const dictionaryTitle = route.params?.dictionaryTitle ?? 'Словарь';
 
@@ -24,7 +25,6 @@ export default function WordsScreen({ route, navigation }) {
   const [query, setQuery] = useState('');
   const [expandedId, setExpandedId] = useState(null);
 
-  // Загружаем слова при каждом открытии экрана
   useFocusEffect(
     useCallback(() => {
       let active = true;
@@ -45,7 +45,6 @@ export default function WordsScreen({ route, navigation }) {
     }, [dictionaryId])
   );
 
-  // Фильтрация слов по поиску
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return words;
@@ -57,7 +56,6 @@ export default function WordsScreen({ route, navigation }) {
     });
   }, [words, query]);
 
-  // Удаление слова
   const handleDelete = (id, word) => {
     Alert.alert('Удалить слово?', `«${word}» будет удалено из словаря.`, [
       { text: 'Отмена', style: 'cancel' },
@@ -77,10 +75,11 @@ export default function WordsScreen({ route, navigation }) {
     ]);
   };
 
-  // Раскрытие/скрытие карточки
   const toggleExpand = (id) => {
     setExpandedId((prev) => (prev === id ? null : id));
   };
+
+  const styles = createStyles(colors);
 
   const renderItem = ({ item }) => {
     const isExpanded = expandedId === item.id;
@@ -102,7 +101,6 @@ export default function WordsScreen({ route, navigation }) {
           ) : null}
         </View>
 
-        {/* Раскрывающийся контент */}
         {isExpanded && (
           <View style={styles.expandedContent}>
             {item.description ? (
@@ -148,7 +146,7 @@ export default function WordsScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
 
       <View style={styles.header}>
         <TouchableOpacity
@@ -165,7 +163,6 @@ export default function WordsScreen({ route, navigation }) {
         </Text>
       </View>
 
-      {/* Поиск */}
       <View style={styles.searchWrapper}>
         <Text style={styles.searchIcon}>🔍</Text>
         <TextInput
@@ -182,7 +179,6 @@ export default function WordsScreen({ route, navigation }) {
         )}
       </View>
 
-      {/* Список слов */}
       {loading ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -198,7 +194,6 @@ export default function WordsScreen({ route, navigation }) {
         />
       )}
 
-      {/* Кнопка добавления (FAB) */}
       <TouchableOpacity
         style={styles.fab}
         activeOpacity={0.85}
@@ -215,7 +210,7 @@ export default function WordsScreen({ route, navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
 
   header: {

@@ -12,10 +12,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors } from '../styles/colors';
+import { useTheme } from '../styles/ThemeContext';
 import { getAllDictionaries, deleteDictionary, getWordCountByDictionary } from '../db/database';
 
 export default function MyDictionariesScreen({ userName, navigation }) {
+  const { isDark, colors } = useTheme();
   const [query, setQuery] = useState('');
   const [dictionaries, setDictionaries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -97,6 +98,8 @@ export default function MyDictionariesScreen({ userName, navigation }) {
     });
   };
 
+  const styles = createStyles(colors);
+
   const renderItem = ({ item }) => (
     <TouchableOpacity
       style={styles.card}
@@ -124,7 +127,7 @@ export default function MyDictionariesScreen({ userName, navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
 
       <View style={styles.headerRow}>
         <View style={{ flex: 1 }}>
@@ -187,7 +190,7 @@ export default function MyDictionariesScreen({ userName, navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 20 },
   headerRow: {
     flexDirection: 'row',
@@ -261,7 +264,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 20,
   },
-
   fab: {
     position: 'absolute',
     right: 20,

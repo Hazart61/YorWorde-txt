@@ -12,19 +12,17 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors } from '../styles/colors';
-import { getAllDictionaries, getWordCountByDictionary } from '../db/database';
+import { useTheme } from '../styles/ThemeContext';
+import { getAllDictionaries, getWordCountByDictionary, getAboutText, saveAboutText } from '../db/database';
 
 const ICON_BELL = '🔔';
 const ICON_PLUS = '➕';
 const ICON_ARROW = '›';
 
 export default function ProfileScreen({ userName, userEmail }) {
+  const { isDark, colors } = useTheme();
   const [modalVisible, setModalVisible] = useState(false);
-  const [aboutText, setAboutText] = useState(
-    "Ну это пока что тестовый вариает, хз че тут можно написать"
-  );
-
+  const [aboutText, setAboutText] = useState('');
   const [dictionaries, setDictionaries] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,6 +32,7 @@ export default function ProfileScreen({ userName, userEmail }) {
       setLoading(true);
       (async () => {
         try {
+          const text = await getAboutText();
           const list = await getAllDictionaries();
           const withCounts = await Promise.all(
             list.map(async (dict) => ({
@@ -41,29 +40,37 @@ export default function ProfileScreen({ userName, userEmail }) {
               wordCount: await getWordCountByDictionary(dict.id),
             }))
           );
-          if (active) setDictionaries(withCounts);
+          if (active) {
+            setAboutText(text);
+            setDictionaries(withCounts);
+          }
         } catch (e) {
-          console.warn('Ошибка загрузки словарей профиля:', e);
+          console.warn('Ошибка загрузки профиля:', e);
         } finally {
           if (active) setLoading(false);
         }
       })();
-      return () => {
-        active = false;
-      };
+      return () => { active = false; };
     }, [])
   );
 
   const totalWords = dictionaries.reduce((sum, d) => sum + d.wordCount, 0);
   const totalDictionaries = dictionaries.length;
 
-  const handleSaveAbout = () => {
-    setModalVisible(false);
+  const handleSaveAbout = async () => {
+    try {
+      await saveAboutText(aboutText);
+      setModalVisible(false);
+    } catch (e) {
+      console.warn('Ошибка сохранения описания:', e);
+    }
   };
+
+  const styles = createStyles(colors);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -190,7 +197,7 @@ export default function ProfileScreen({ userName, userEmail }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
 
@@ -249,23 +256,6 @@ const styles = StyleSheet.create({
     borderColor: colors.divider,
   },
   iconText: { fontSize: 20 },
-
-  statsCard: {
-    flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    paddingVertical: 16,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  statItem: { flex: 1, alignItems: 'center' },
-  statNumber: { fontSize: 22, fontWeight: 'bold', color: colors.primary },
-  statLabel: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
-  statDivider: { width: 1, backgroundColor: colors.divider, marginVertical: 4 },
 
   section: { marginBottom: 20 },
   sectionHeader: {
