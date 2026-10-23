@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,43 +8,93 @@ import {
   TouchableOpacity,
   StatusBar,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '../styles/colors';
-import { logout } from '../storage/userStorage';
+import { getAllDictionaries, deleteDictionary, getWordCountByDictionary } from '../db/database';
 
-const DICTIONARIES = [
-  {
-    id: '1',
-    title: 'Тестовый словарь',
-    description: 'Слова, которые вы добавите, попадут сюда',
-    color: colors.purple,
-  },
-];
-
-export default function MyDictionariesScreen({ userName, navigation, onLogout }) {
+export default function MyDictionariesScreen({ userName, navigation }) {
   const [query, setQuery] = useState('');
+  const [dictionaries, setDictionaries] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = DICTIONARIES.filter((d) =>
+  const loadDictionaries = async () => {
+    try {
+      const list = await getAllDictionaries();
+      const withCounts = await Promise.all(
+        list.map(async (dict) => ({
+          ...dict,
+          wordCount: await getWordCountByDictionary(dict.id),
+        }))
+      );
+      setDictionaries(withCounts);
+    } catch (e) {
+      console.warn('Ошибка загрузки словарей:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      setLoading(true);
+      (async () => {
+        try {
+          const list = await getAllDictionaries();
+          const withCounts = await Promise.all(
+            list.map(async (dict) => ({
+              ...dict,
+              wordCount: await getWordCountByDictionary(dict.id),
+            }))
+          );
+          if (active) setDictionaries(withCounts);
+        } catch (e) {
+          console.warn('Ошибка загрузки словарей:', e);
+        } finally {
+          if (active) setLoading(false);
+        }
+      })();
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
+
+  const filtered = dictionaries.filter((d) =>
     d.title.toLowerCase().includes(query.trim().toLowerCase())
   );
 
-  const handleLogout = () => {
-    Alert.alert('Выйти из аккаунта?', 'Данные словаря сохранятся в БД.', [
-      { text: 'Отмена', style: 'cancel' },
-      {
-        text: 'Выйти',
-        style: 'destructive',
-        onPress: async () => {
-          await logout();
-          if (onLogout) onLogout();
+  const handleDeleteDictionary = (id, title) => {
+    Alert.alert(
+      'Удалить словарь?',
+      `Словарь «${title}» и все его слова будут удалены.`,
+      [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: 'Удалить',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteDictionary(id);
+              loadDictionaries();
+            } catch (e) {
+              console.warn('Ошибка удаления словаря:', e);
+              Alert.alert('Ошибка', 'Не удалось удалить словарь');
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const handleOpenDictionary = (dict) => {
-    navigation.navigate('Words', { dictionaryTitle: dict.title });
+    navigation.navigate('Words', {
+      dictionaryId: dict.id,
+      dictionaryTitle: dict.title,
+    });
   };
 
   const renderItem = ({ item }) => (
@@ -52,15 +102,23 @@ export default function MyDictionariesScreen({ userName, navigation, onLogout })
       style={styles.card}
       activeOpacity={0.8}
       onPress={() => handleOpenDictionary(item)}
+      onLongPress={() => handleDeleteDictionary(item.id, item.title)}
     >
-      <View style={[styles.cardIcon, { backgroundColor: item.color }]}>
-        <Text style={styles.cardIconText}>❐</Text>
+      <View style={[styles.cardIcon, { backgroundColor: item.color || colors.primary }]}>
+        <Text style={styles.cardIconText}>{item.emoji || '❐'}</Text>
       </View>
       <View style={{ flex: 1, marginLeft: 12 }}>
         <Text style={styles.cardTitle}>{item.title}</Text>
-        <Text style={styles.cardMeta}>{item.description}</Text>
+        <Text style={styles.cardMeta}>
+          {item.wordCount} слов · {item.description || 'Без описания'}
+        </Text>
       </View>
-      <Text style={styles.chevron}>›</Text>
+      <TouchableOpacity
+        style={styles.deleteIconBtn}
+        onPress={() => handleDeleteDictionary(item.id, item.title)}
+      >
+        <Text style={styles.deleteIconText}>🗑</Text>
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
@@ -75,14 +133,12 @@ export default function MyDictionariesScreen({ userName, navigation, onLogout })
             {userName}!
           </Text>
         </View>
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Выйти</Text>
-        </TouchableOpacity>
       </View>
 
-      <Text style={styles.title}>Мои словари</Text>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>Мои словари</Text>
+      </View>
 
-      {/* Поиск словарей */}
       <View style={styles.searchWrapper}>
         <Text style={styles.searchIcon}>🔍</Text>
         <TextInput
@@ -99,15 +155,34 @@ export default function MyDictionariesScreen({ userName, navigation, onLogout })
         )}
       </View>
 
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <Text style={styles.empty}>Словари не найдены</Text>
-        }
-      />
+      {loading ? (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <View style={styles.emptyBox}>
+              <Text style={styles.emptyTitle}>Словарей пока нет</Text>
+              <Text style={styles.emptyText}>
+                Нажмите «+», чтобы создать первый словарь.
+              </Text>
+            </View>
+          }
+        />
+      )}
+
+      <TouchableOpacity
+        style={styles.fab}
+        activeOpacity={0.85}
+        onPress={() => navigation.navigate('CreateDictionary')}
+      >
+        <Text style={styles.fabText}>+</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -122,16 +197,14 @@ const styles = StyleSheet.create({
   },
   hello: { fontSize: 14, color: colors.textSecondary },
   nick: { fontSize: 22, fontWeight: 'bold', color: colors.textPrimary },
-  logoutBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-  },
-  logoutText: { color: colors.primary, fontWeight: '600', fontSize: 14 },
 
-  title: { fontSize: 26, fontWeight: 'bold', color: colors.textPrimary, marginTop: 8 },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  title: { fontSize: 26, fontWeight: 'bold', color: colors.textPrimary },
 
   searchWrapper: {
     flexDirection: 'row',
@@ -148,7 +221,7 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 15, color: colors.textPrimary },
   clearIcon: { fontSize: 16, color: colors.textDisabled, paddingHorizontal: 4 },
 
-  listContent: { paddingTop: 16, paddingBottom: 20 },
+  listContent: { paddingTop: 16, paddingBottom: 100 },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -172,6 +245,38 @@ const styles = StyleSheet.create({
   cardIconText: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
   cardTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
   cardMeta: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
-  chevron: { fontSize: 26, color: colors.textDisabled, marginLeft: 8 },
-  empty: { textAlign: 'center', color: colors.textSecondary, marginTop: 20 },
+  deleteIconBtn: { padding: 8 },
+  deleteIconText: { fontSize: 18 },
+  loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  emptyBox: { alignItems: 'center', paddingVertical: 60 },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 6,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOpacity: 0.35,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  fabText: { color: '#fff', fontSize: 32, lineHeight: 34, marginTop: -2 },
 });

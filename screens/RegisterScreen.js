@@ -91,7 +91,7 @@ export default function RegisterScreen({ navigation }) {
             <Text style={[styles.label, { marginTop: 16 }]}>Email</Text>
             <TextInput
               style={styles.input}
-              placeholder="example@mail.com"
+              placeholder="testemalelol@mail.com"
               placeholderTextColor={colors.textDisabled}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -103,7 +103,7 @@ export default function RegisterScreen({ navigation }) {
             <View style={styles.passwordWrapper}>
               <TextInput
                 style={[styles.input, { flex: 1, borderWidth: 0 }]}
-                placeholder="••••••••"
+                placeholder="*********"
                 placeholderTextColor={colors.textDisabled}
                 secureTextEntry={!showPassword}
                 value={password}
@@ -123,7 +123,7 @@ export default function RegisterScreen({ navigation }) {
             <View style={styles.passwordWrapper}>
               <TextInput
                 style={[styles.input, { flex: 1, borderWidth: 0 }]}
-                placeholder="••••••••"
+                placeholder="*********"
                 placeholderTextColor={colors.textDisabled}
                 secureTextEntry={!showConfirm}
                 value={confirmPassword}

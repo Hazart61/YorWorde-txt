@@ -79,7 +79,7 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.label}>Email</Text>
             <TextInput
               style={styles.input}
-              placeholder="example@mail.com"
+              placeholder="testemalelol@mail.com"
               placeholderTextColor={colors.textDisabled}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -91,7 +91,7 @@ export default function LoginScreen({ navigation }) {
             <Text style={[styles.label, { marginTop: 16 }]}>Имя</Text>
             <TextInput
               style={styles.input}
-              placeholder="Как к вам обращаться?"
+              placeholder="Временно, пока нету системы аккаунта("
               placeholderTextColor={colors.textDisabled}
               autoCapitalize="words"
               value={userName}
@@ -102,7 +102,7 @@ export default function LoginScreen({ navigation }) {
             <View style={styles.passwordWrapper}>
               <TextInput
                 style={[styles.input, { flex: 1, borderWidth: 0 }]}
-                placeholder="••••••••"
+                placeholder="*********"
                 placeholderTextColor={colors.textDisabled}
                 secureTextEntry={!showPassword}
                 value={password}

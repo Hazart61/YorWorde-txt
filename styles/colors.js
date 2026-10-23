@@ -16,4 +16,6 @@ export const colors = {
   yellow: '#FFC107',
   green: '#2E7D32',
   blue: '#1E88E5',
+  border: '#E5E7EB',
+  inputBg: '#F9FAFB',
 };

@@ -13,21 +13,25 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '../styles/colors';
-import { getAllWords, deleteWord } from '../db/database';
+import { getWordsByDictionary, deleteWord } from '../db/database';
 
 export default function WordsScreen({ route, navigation }) {
+  const dictionaryId = route.params?.dictionaryId;
   const dictionaryTitle = route.params?.dictionaryTitle ?? 'Словарь';
 
   const [words, setWords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
+  const [expandedId, setExpandedId] = useState(null);
 
+  // Загружаем слова при каждом открытии экрана
   useFocusEffect(
     useCallback(() => {
       let active = true;
       (async () => {
         try {
-          const all = await getAllWords();
+          setLoading(true);
+          const all = await getWordsByDictionary(dictionaryId);
           if (active) setWords(all);
         } catch (e) {
           console.warn('Ошибка загрузки слов:', e);
@@ -38,10 +42,10 @@ export default function WordsScreen({ route, navigation }) {
       return () => {
         active = false;
       };
-    }, [])
+    }, [dictionaryId])
   );
 
-  // Фильтрация по слову / категории / описанию
+  // Фильтрация слов по поиску
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return words;
@@ -53,6 +57,7 @@ export default function WordsScreen({ route, navigation }) {
     });
   }, [words, query]);
 
+  // Удаление слова
   const handleDelete = (id, word) => {
     Alert.alert('Удалить слово?', `«${word}» будет удалено из словаря.`, [
       { text: 'Отмена', style: 'cancel' },
@@ -60,37 +65,71 @@ export default function WordsScreen({ route, navigation }) {
         text: 'Удалить',
         style: 'destructive',
         onPress: async () => {
-          await deleteWord(id);
-          const all = await getAllWords();
-          setWords(all);
+          try {
+            await deleteWord(id);
+            const all = await getWordsByDictionary(dictionaryId);
+            setWords(all);
+          } catch (e) {
+            console.warn('Ошибка удаления слова:', e);
+          }
         },
       },
     ]);
   };
 
-  const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.word}>{item.word}</Text>
-        {item.category ? (
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryText}>{item.category}</Text>
-          </View>
-        ) : null}
-      </View>
+  // Раскрытие/скрытие карточки
+  const toggleExpand = (id) => {
+    setExpandedId((prev) => (prev === id ? null : id));
+  };
 
-      {item.description ? (
-        <Text style={styles.description}>{item.description}</Text>
-      ) : null}
+  const renderItem = ({ item }) => {
+    const isExpanded = expandedId === item.id;
 
+    return (
       <TouchableOpacity
-        onPress={() => handleDelete(item.id, item.word)}
-        style={styles.deleteBtn}
+        style={styles.card}
+        activeOpacity={0.9}
+        onPress={() => toggleExpand(item.id)}
       >
-        <Text style={styles.deleteText}>Удалить</Text>
+        <View style={styles.cardHeader}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.word}>{item.word}</Text>
+          </View>
+          {item.category ? (
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryText}>{item.category}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        {/* Раскрывающийся контент */}
+        {isExpanded && (
+          <View style={styles.expandedContent}>
+            {item.description ? (
+              <>
+                <Text style={styles.sectionLabel}>Описание</Text>
+                <Text style={styles.description}>{item.description}</Text>
+              </>
+            ) : null}
+
+            {item.example ? (
+              <>
+                <Text style={styles.sectionLabel}>Пример</Text>
+                <Text style={styles.example}>«{item.example}»</Text>
+              </>
+            ) : null}
+          </View>
+        )}
+
+        <TouchableOpacity
+          onPress={() => handleDelete(item.id, item.word)}
+          style={styles.deleteBtn}
+        >
+          <Text style={styles.deleteText}>Удалить</Text>
+        </TouchableOpacity>
       </TouchableOpacity>
-    </View>
-  );
+    );
+  };
 
   const renderEmpty = () => {
     if (loading) return null;
@@ -126,7 +165,7 @@ export default function WordsScreen({ route, navigation }) {
         </Text>
       </View>
 
-      {/* Поиск слов */}
+      {/* Поиск */}
       <View style={styles.searchWrapper}>
         <Text style={styles.searchIcon}>🔍</Text>
         <TextInput
@@ -143,6 +182,7 @@ export default function WordsScreen({ route, navigation }) {
         )}
       </View>
 
+      {/* Список слов */}
       {loading ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -154,14 +194,20 @@ export default function WordsScreen({ route, navigation }) {
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={renderEmpty}
+          showsVerticalScrollIndicator={false}
         />
       )}
 
-      {/* Кнопка «+» — поднята выше от нижнего края */}
+      {/* Кнопка добавления (FAB) */}
       <TouchableOpacity
         style={styles.fab}
         activeOpacity={0.85}
-        onPress={() => navigation.navigate('AddWord')}
+        onPress={() =>
+          navigation.navigate('AddWord', {
+            dictionaryId,
+            dictionaryTitle,
+          })
+        }
       >
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
@@ -188,7 +234,6 @@ const styles = StyleSheet.create({
   counter: { fontSize: 13, color: colors.textSecondary, marginTop: 4 },
   counterNumber: { color: colors.primary, fontWeight: '700' },
 
-  // Поиск
   searchWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -217,13 +262,15 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 8,
     elevation: 1,
+    borderWidth: 1,
+    borderColor: colors.divider,
   },
   cardHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
   },
-  word: { fontSize: 18, fontWeight: '700', color: colors.textPrimary, flex: 1 },
+  word: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   categoryBadge: {
     backgroundColor: '#EFEAFF',
     paddingHorizontal: 10,
@@ -232,12 +279,33 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   categoryText: { fontSize: 12, color: colors.primary, fontWeight: '600' },
+
+  expandedContent: {
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textDisabled,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+    marginTop: 8,
+  },
   description: {
     fontSize: 14,
-    color: colors.textSecondary,
-    marginTop: 8,
+    color: colors.textPrimary,
     lineHeight: 20,
   },
+  example: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+    lineHeight: 20,
+  },
+
   deleteBtn: { alignSelf: 'flex-start', marginTop: 12 },
   deleteText: { color: colors.error, fontSize: 13, fontWeight: '600' },
 

@@ -20,6 +20,10 @@ export default function MainTabsScreen({ route, navigation }) {
   const userName = route.params?.userName ?? 'Гость';
   const userEmail = route.params?.userEmail ?? '';
 
+  const handleLogout = () => {
+    navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+  };
+
   const renderScreen = () => {
     switch (activeTab) {
       case 'my':
@@ -27,9 +31,6 @@ export default function MainTabsScreen({ route, navigation }) {
           <MyDictionariesScreen
             userName={userName}
             navigation={navigation}
-            onLogout={() =>
-              navigation.reset({ index: 0, routes: [{ name: 'Login' }] })
-            }
           />
         );
       case 'all':
@@ -37,7 +38,7 @@ export default function MainTabsScreen({ route, navigation }) {
       case 'profile':
         return <ProfileScreen userName={userName} userEmail={userEmail} />;
       case 'settings':
-        return <SettingsScreen />;
+        return <SettingsScreen onLogout={handleLogout} />;
       default:
         return null;
     }

@@ -9,6 +9,7 @@ import RegisterScreen from './screens/RegisterScreen';
 import MainTabsScreen from './screens/MainTabsScreen';
 import WordsScreen from './screens/WordsScreen';
 import AddWordScreen from './screens/AddWordScreen';
+import CreateDictionaryScreen from './screens/CreateDictionaryScreen'; // Проверьте этот импорт
 
 import { initDatabase } from './db/database';
 import { colors } from './styles/colors';
@@ -52,6 +53,13 @@ export default function App() {
           <Stack.Screen name="MainTabs" component={MainTabsScreen} />
           <Stack.Screen name="Words" component={WordsScreen} />
           <Stack.Screen name="AddWord" component={AddWordScreen} />
+          
+          {/* Экран должен быть зарегистрирован именно так */}
+          <Stack.Screen
+            name="CreateDictionary"
+            component={CreateDictionaryScreen}
+          />
+          
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
@@ -66,3 +74,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
 });
+
+
+
+
+

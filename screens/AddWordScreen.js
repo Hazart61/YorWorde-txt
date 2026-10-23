@@ -15,11 +15,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../styles/colors';
 import { addWord } from '../db/database';
 
-export default function AddWordScreen({ navigation }) {
+export default function AddWordScreen({ navigation, route }) {
   const [word, setWord] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
+  const [example, setExample] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const dictionaryId = route.params?.dictionaryId;
+  const dictionaryTitle = route.params?.dictionaryTitle || 'Словарь';
 
   const handleSave = async () => {
     const trimmedWord = word.trim();
@@ -31,9 +35,11 @@ export default function AddWordScreen({ navigation }) {
     try {
       setSaving(true);
       await addWord({
+        dictionary_id: dictionaryId,
         word: trimmedWord,
         category: category.trim(),
         description: description.trim(),
+        example: example.trim(),
       });
       navigation.goBack();
     } catch (e) {
@@ -55,6 +61,7 @@ export default function AddWordScreen({ navigation }) {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
             <TouchableOpacity
@@ -65,7 +72,7 @@ export default function AddWordScreen({ navigation }) {
             </TouchableOpacity>
             <Text style={styles.title}>Новое слово</Text>
             <Text style={styles.subtitle}>
-              Добавим новое слово в словарь?
+              Добавим новое слово в словарь «{dictionaryTitle}»?
             </Text>
           </View>
 
@@ -100,6 +107,17 @@ export default function AddWordScreen({ navigation }) {
               textAlignVertical="top"
               value={description}
               onChangeText={setDescription}
+            />
+
+            <Text style={[styles.label, { marginTop: 16 }]}>Пример</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Предложение, где используется это слово..."
+              placeholderTextColor={colors.textDisabled}
+              multiline
+              textAlignVertical="top"
+              value={example}
+              onChangeText={setExample}
             />
 
             <TouchableOpacity
@@ -144,6 +162,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
     marginTop: 4,
+    lineHeight: 20,
   },
 
   form: { flex: 1 },
@@ -164,7 +183,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textPrimary,
   },
-  textArea: { minHeight: 120 },
+  textArea: { minHeight: 100 },
 
   primaryBtn: {
     height: 52,
