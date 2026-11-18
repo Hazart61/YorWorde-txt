@@ -10,12 +10,17 @@ import {
   Modal,
   ActivityIndicator,
   Alert,
+  Image,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useProfileViewModel } from '../../viewmodels/useProfileViewModel';
 import ErrorView from '../components/ErrorView';
+import PhotoSourceSheet from '../components/PhotoSourceSheet';
+import { useAvatarViewModel } from '../../viewmodels/useAvatarViewModel';
+import { PhotoSource, PickFailure } from '../../models/Permission';
 
 const ICON_BELL = '🔔';
 const ICON_PLUS = '➕';
@@ -48,6 +53,82 @@ export default function ProfileScreen({ userName, userEmail }) {
     }
   };
 
+  // ---------- Фото профиля ----------
+  const avatar = useAvatarViewModel();
+  const [sheetVisible, setSheetVisible] = useState(false);
+
+  const sourceName = (source) => (source === PhotoSource.CAMERA ? 'камере' : 'фото');
+
+  /** Ветвления сценария разрешений: какой диалог показать по результату ViewModel. */
+  const handlePickResult = (result) => {
+    if (result.ok) return;
+
+    switch (result.reason) {
+      case PickFailure.CANCELED:
+        return; // пользователь сам закрыл камеру/галерею
+
+      case PickFailure.NEEDS_RATIONALE:
+        // Ранее отказали — объясняем, зачем нужен доступ, и спрашиваем снова
+        Alert.alert(
+          result.source === PhotoSource.CAMERA ? 'Доступ к камере' : 'Доступ к фото',
+          `Доступ к ${sourceName(result.source)} нужен, чтобы установить фото профиля.`,
+          [
+            { text: 'Отмена', style: 'cancel' },
+            {
+              text: 'Разрешить',
+              onPress: async () => handlePickResult(await avatar.requestAndChoose(result.source)),
+            },
+          ]
+        );
+        return;
+
+      case PickFailure.DENIED:
+        if (result.source === PhotoSource.CAMERA) {
+          // Камеру не дали — предлагаем альтернативу: галерею
+          Alert.alert(
+            'Доступ ограничен',
+            'Без камеры не получится сделать снимок. Можно выбрать фото из галереи.',
+            [
+              { text: 'Отмена', style: 'cancel' },
+              {
+                text: 'В галерею',
+                onPress: async () => handlePickResult(await avatar.choosePhoto(PhotoSource.GALLERY)),
+              },
+            ]
+          );
+        } else {
+          Alert.alert('Доступ ограничен', 'Без доступа к фото нельзя выбрать аватар.');
+        }
+        return;
+
+      case PickFailure.BLOCKED:
+        // Отказ «навсегда» — повторный запрос не покажется, помогут только настройки
+        Alert.alert(
+          'Доступ запрещён',
+          `Доступ к ${sourceName(result.source)} отключён. Включите его в настройках телефона.`,
+          [
+            { text: 'Отмена', style: 'cancel' },
+            { text: 'Открыть настройки', onPress: () => Linking.openSettings() },
+          ]
+        );
+        return;
+
+      default:
+        Alert.alert('Ошибка', result.error || 'Не удалось установить фото');
+    }
+  };
+
+  const choose = async (source) => {
+    setSheetVisible(false);
+    handlePickResult(await avatar.choosePhoto(source));
+  };
+
+  const handleRemoveAvatar = async () => {
+    setSheetVisible(false);
+    const result = await avatar.removeAvatar();
+    if (!result.ok) Alert.alert('Ошибка', result.error);
+  };
+
   const styles = createStyles(colors);
 
   return (
@@ -59,13 +140,30 @@ export default function ProfileScreen({ userName, userEmail }) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerRow}>
-          <View style={styles.avatarContainer}>
+          <TouchableOpacity
+            style={styles.avatarContainer}
+            onPress={() => setSheetVisible(true)}
+            activeOpacity={0.8}
+            disabled={avatar.isBusy}
+          >
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {userName ? userName[0].toUpperCase() : '?'}
-              </Text>
+              {avatar.avatarUri ? (
+                <Image testID="avatar-image" source={{ uri: avatar.avatarUri }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarText}>
+                  {userName ? userName[0].toUpperCase() : '?'}
+                </Text>
+              )}
+              {avatar.isBusy && (
+                <View style={styles.avatarBusy}>
+                  <ActivityIndicator color="#fff" />
+                </View>
+              )}
             </View>
-          </View>
+            <View style={styles.avatarBadge}>
+              <Text style={styles.avatarBadgeText}>📷</Text>
+            </View>
+          </TouchableOpacity>
 
           <View style={styles.headerInfo}>
             <Text style={styles.name}>{userName}</Text>
@@ -178,6 +276,15 @@ export default function ProfileScreen({ userName, userEmail }) {
           </View>
         </View>
       </Modal>
+
+      <PhotoSourceSheet
+        visible={sheetVisible}
+        hasPhoto={avatar.hasAvatar}
+        onGallery={() => choose(PhotoSource.GALLERY)}
+        onCamera={() => choose(PhotoSource.CAMERA)}
+        onRemove={handleRemoveAvatar}
+        onClose={() => setSheetVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -209,6 +316,28 @@ const createStyles = (colors) => StyleSheet.create({
     elevation: 3,
   },
   avatarText: { color: '#fff', fontSize: 32, fontWeight: 'bold' },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 40 },
+  avatarBusy: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 40,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  avatarBadgeText: { fontSize: 14 },
   headerInfo: { flex: 1 },
   name: { fontSize: 24, fontWeight: 'bold', color: colors.textPrimary },
   email: { fontSize: 14, color: colors.textSecondary, marginTop: 2 },
