@@ -1,77 +1,59 @@
-import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import LoginScreen from './screens/LoginScreen';
-import RegisterScreen from './screens/RegisterScreen';
-import MainTabsScreen from './screens/MainTabsScreen';
-import WordsScreen from './screens/WordsScreen';
-import AddWordScreen from './screens/AddWordScreen';
-import CreateDictionaryScreen from './screens/CreateDictionaryScreen';
-import GalleryScreen from './screens/GalleryScreen';
-import CharacterDetailScreen from './screens/CharacterDetailScreen';
+import LoginScreen from './src/views/screens/LoginScreen';
+import RegisterScreen from './src/views/screens/RegisterScreen';
+import MainTabsScreen from './src/views/screens/MainTabsScreen';
+import WordsScreen from './src/views/screens/WordsScreen';
+import AddWordScreen from './src/views/screens/AddWordScreen';
+import CreateDictionaryScreen from './src/views/screens/CreateDictionaryScreen';
+import GalleryScreen from './src/views/screens/GalleryScreen';
+import CharacterDetailScreen from './src/views/screens/CharacterDetailScreen';
+import LoadingView from './src/views/components/LoadingView';
+import ErrorView from './src/views/components/ErrorView';
 
-import { initDatabase } from './db/database';
-import { colors } from './styles/colors';
-import { ThemeProvider } from './styles/ThemeContext'; // Новый путь импорта
+import { ThemeProvider } from './src/theme/ThemeContext';
+import { useAppViewModel } from './src/viewmodels/useAppViewModel';
 
 const Stack = createNativeStackNavigator();
 
+function AppNavigator() {
+  const vm = useAppViewModel();
+
+  if (vm.isLoading) return <LoadingView />;
+  if (vm.isError) return <ErrorView message={vm.error} onRetry={vm.retry} />;
+
+  return (
+    <NavigationContainer>
+      <Stack.Navigator
+        initialRouteName={vm.initialRoute}
+        screenOptions={{ headerShown: false }}
+      >
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Register" component={RegisterScreen} />
+        <Stack.Screen
+          name="MainTabs"
+          component={MainTabsScreen}
+          initialParams={vm.initialParams}
+        />
+        <Stack.Screen name="Words" component={WordsScreen} />
+        <Stack.Screen name="AddWord" component={AddWordScreen} />
+        <Stack.Screen name="CreateDictionary" component={CreateDictionaryScreen} />
+        <Stack.Screen name="Gallery" component={GalleryScreen} />
+        <Stack.Screen name="CharacterDetail" component={CharacterDetailScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+
 export default function App() {
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        await initDatabase();
-      } catch (e) {
-        console.warn('Ошибка инициализации БД:', e);
-      } finally {
-        setReady(true);
-      }
-    })();
-  }, []);
-
-  if (!ready) {
-    return (
-      <SafeAreaProvider>
-        <View style={styles.loading}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      </SafeAreaProvider>
-    );
-  }
-
   return (
     <ThemeProvider>
       <SafeAreaProvider>
-        <NavigationContainer>
-          <Stack.Navigator
-            initialRouteName="Login"
-            screenOptions={{ headerShown: false }}
-          >
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Register" component={RegisterScreen} />
-            <Stack.Screen name="MainTabs" component={MainTabsScreen} />
-            <Stack.Screen name="Words" component={WordsScreen} />
-            <Stack.Screen name="AddWord" component={AddWordScreen} />
-            <Stack.Screen name="CreateDictionary" component={CreateDictionaryScreen} />
-            <Stack.Screen name="Gallery" component={GalleryScreen} />
-            <Stack.Screen name="CharacterDetail" component={CharacterDetailScreen} />
-          </Stack.Navigator>
-        </NavigationContainer>
+        <AppNavigator />
       </SafeAreaProvider>
     </ThemeProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-  },
-});

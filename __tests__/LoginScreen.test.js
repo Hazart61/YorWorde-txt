@@ -3,7 +3,7 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
-import LoginScreen from '../screens/LoginScreen';
+import LoginScreen from '../src/views/screens/LoginScreen';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
@@ -29,9 +29,9 @@ describe('LoginScreen', () => {
       <LoginScreen navigation={mockNavigation} onLogin={mockOnLogin} />
     );
 
-    expect(getByPlaceholderText('example@mail.com')).toBeTruthy();
-    expect(getByPlaceholderText('Временно, без системы аккаунта')).toBeTruthy();
-    expect(getByPlaceholderText('••••••••')).toBeTruthy();
+    expect(getByPlaceholderText('testemalelol@mail.com')).toBeTruthy();
+    expect(getByPlaceholderText('Временно, пока нету системы аккаунта(')).toBeTruthy();
+    expect(getByPlaceholderText('*********')).toBeTruthy();
     expect(getByText('Войти')).toBeTruthy();
     expect(getByText('Зарегистрироваться')).toBeTruthy();
   });
@@ -44,15 +44,15 @@ describe('LoginScreen', () => {
     );
 
     fireEvent.changeText(
-      getByPlaceholderText('example@mail.com'),
+      getByPlaceholderText('testemalelol@mail.com'),
       'user@example.com'
     );
     fireEvent.changeText(
-      getByPlaceholderText('Временно, без системы аккаунта'),
+      getByPlaceholderText('Временно, пока нету системы аккаунта('),
       'Иван'
     );
     fireEvent.changeText(
-      getByPlaceholderText('••••••••'),
+      getByPlaceholderText('*********'),
       'P@ssword123'
     );
     fireEvent.press(getByText('Войти'));
@@ -88,7 +88,7 @@ describe('LoginScreen', () => {
     );
 
     fireEvent.changeText(
-      getByPlaceholderText('example@mail.com'),
+      getByPlaceholderText('testemalelol@mail.com'),
       'user@example.com'
     );
     fireEvent.press(getByText('Войти'));
@@ -106,11 +106,11 @@ describe('LoginScreen', () => {
     );
 
     fireEvent.changeText(
-      getByPlaceholderText('example@mail.com'),
+      getByPlaceholderText('testemalelol@mail.com'),
       'user@example.com'
     );
     fireEvent.changeText(
-      getByPlaceholderText('Временно, без системы аккаунта'),
+      getByPlaceholderText('Временно, пока нету системы аккаунта('),
       'Иван'
     );
     fireEvent.press(getByText('Войти'));
@@ -128,15 +128,15 @@ describe('LoginScreen', () => {
     );
 
     fireEvent.changeText(
-      getByPlaceholderText('example@mail.com'),
+      getByPlaceholderText('testemalelol@mail.com'),
       '  user@example.com  '
     );
     fireEvent.changeText(
-      getByPlaceholderText('Временно, без системы аккаунта'),
+      getByPlaceholderText('Временно, пока нету системы аккаунта('),
       '  Иван  '
     );
     fireEvent.changeText(
-      getByPlaceholderText('••••••••'),
+      getByPlaceholderText('*********'),
       '  P@ssword123  '
     );
     fireEvent.press(getByText('Войти'));

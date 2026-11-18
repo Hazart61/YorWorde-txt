@@ -44,10 +44,7 @@
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|@react-native-async-storage/.*))"
     ],
     "collectCoverageFrom": [
-      "screens/**/*.{js,jsx}",
-      "components/**/*.{js,jsx}",
-      "storage/**/*.js",
-      "db/**/*.js",
+      "src/**/*.{js,jsx}",
       "!**/node_modules/**"
     ]
   },
