@@ -1,71 +1,57 @@
 import * as SQLite from 'expo-sqlite';
 
-// БД открывается лениво и асинхронно: импорт модуля не падает,
-// а ошибка открытия попадёт в состояние Error (с кнопкой «Повторить»).
-let dbPromise = null;
-
-function getDb() {
-  if (!dbPromise) {
-    dbPromise = SQLite.openDatabaseAsync('yorworde.db').catch((e) => {
-      dbPromise = null;
-      throw e;
-    });
-  }
-  return dbPromise;
-}
-
-// Источник данных: локальная БД SQLite.
-// Здесь только SQL-запросы. Возвращаются «сырые» строки таблиц,
-// в сущности их превращают репозитории (src/data/repositories).
+const db = SQLite.openDatabaseSync('yorworde.db');
 
 export async function initDatabase() {
-  const db = await getDb();
-  let needsMigration = false;
-  const tableInfo = await db.getAllAsync('PRAGMA table_info(words);');
+  try {
+    let needsMigration = false;
+    const tableInfo = await db.getAllAsync("PRAGMA table_info(words);");
+    
+    if (tableInfo.length > 0) {
+      const hasDictionaryId = tableInfo.some(col => col.name === 'dictionary_id');
+      if (!hasDictionaryId) needsMigration = true;
+    }
 
-  if (tableInfo.length > 0) {
-    const hasDictionaryId = tableInfo.some((col) => col.name === 'dictionary_id');
-    if (!hasDictionaryId) needsMigration = true;
-  }
+    if (needsMigration) {
+      await db.execAsync(`
+        DROP TABLE IF EXISTS words;
+        DROP TABLE IF EXISTS dictionaries;
+      `);
+    }
 
-  if (needsMigration) {
     await db.execAsync(`
-      DROP TABLE IF EXISTS words;
-      DROP TABLE IF EXISTS dictionaries;
+      CREATE TABLE IF NOT EXISTS dictionaries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        description TEXT,
+        color TEXT,
+        emoji TEXT,
+        created_at INTEGER NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS words (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        dictionary_id INTEGER NOT NULL,
+        word TEXT NOT NULL,
+        category TEXT,
+        description TEXT,
+        example TEXT,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY (dictionary_id) REFERENCES dictionaries (id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS profile (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        about TEXT
+      );
     `);
+  } catch (e) {
+    console.warn('Ошибка инициализации БД:', e);
   }
-
-  await db.execAsync(`
-    CREATE TABLE IF NOT EXISTS dictionaries (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
-      description TEXT,
-      color TEXT,
-      emoji TEXT,
-      created_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS words (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      dictionary_id INTEGER NOT NULL,
-      word TEXT NOT NULL,
-      category TEXT,
-      description TEXT,
-      example TEXT,
-      created_at INTEGER NOT NULL,
-      FOREIGN KEY (dictionary_id) REFERENCES dictionaries (id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS profile (
-      id INTEGER PRIMARY KEY CHECK (id = 1),
-      about TEXT
-    );
-  `);
 }
 
 // ========== ОЧИСТКА ДАННЫХ ==========
 export async function clearAllData() {
-  const db = await getDb();
   await db.execAsync(`
     DELETE FROM words;
     DELETE FROM dictionaries;
@@ -75,7 +61,6 @@ export async function clearAllData() {
 
 // ========== СЛОВАРИ ==========
 export async function addDictionary({ title, description, color, emoji }) {
-  const db = await getDb();
   const createdAt = Date.now();
   return await db.runAsync(
     'INSERT INTO dictionaries (title, description, color, emoji, created_at) VALUES (?, ?, ?, ?, ?);',
@@ -84,31 +69,16 @@ export async function addDictionary({ title, description, color, emoji }) {
 }
 
 export async function getAllDictionaries() {
-  const db = await getDb();
   return await db.getAllAsync('SELECT * FROM dictionaries ORDER BY id DESC;');
 }
 
-// Словари вместе с количеством слов — одним запросом вместо N+1.
-export async function getAllDictionariesWithWordCount() {
-  const db = await getDb();
-  return await db.getAllAsync(`
-    SELECT d.*, COUNT(w.id) AS word_count
-    FROM dictionaries d
-    LEFT JOIN words w ON w.dictionary_id = d.id
-    GROUP BY d.id
-    ORDER BY d.id DESC;
-  `);
-}
-
 export async function deleteDictionary(id) {
-  const db = await getDb();
   await db.runAsync('DELETE FROM words WHERE dictionary_id = ?;', [id]);
   return await db.runAsync('DELETE FROM dictionaries WHERE id = ?;', [id]);
 }
 
 // ========== СЛОВА ==========
 export async function addWord({ dictionary_id, word, category, description, example }) {
-  const db = await getDb();
   const createdAt = Date.now();
   return await db.runAsync(
     'INSERT INTO words (dictionary_id, word, category, description, example, created_at) VALUES (?, ?, ?, ?, ?, ?);',
@@ -117,7 +87,6 @@ export async function addWord({ dictionary_id, word, category, description, exam
 }
 
 export async function getWordsByDictionary(dictionary_id) {
-  const db = await getDb();
   return await db.getAllAsync(
     'SELECT * FROM words WHERE dictionary_id = ? ORDER BY id DESC;',
     [dictionary_id]
@@ -125,12 +94,10 @@ export async function getWordsByDictionary(dictionary_id) {
 }
 
 export async function deleteWord(id) {
-  const db = await getDb();
   return await db.runAsync('DELETE FROM words WHERE id = ?;', [id]);
 }
 
 export async function getWordCountByDictionary(dictionary_id) {
-  const db = await getDb();
   const result = await db.getFirstAsync(
     'SELECT COUNT(*) as count FROM words WHERE dictionary_id = ?;',
     [dictionary_id]
@@ -139,26 +106,22 @@ export async function getWordCountByDictionary(dictionary_id) {
 }
 
 export async function getTotalWordCount() {
-  const db = await getDb();
   const result = await db.getFirstAsync('SELECT COUNT(*) as count FROM words;');
   return result?.count ?? 0;
 }
 
 export async function getTotalDictionaryCount() {
-  const db = await getDb();
   const result = await db.getFirstAsync('SELECT COUNT(*) as count FROM dictionaries;');
   return result?.count ?? 0;
 }
 
 // ========== ПРОФИЛЬ ==========
 export async function getAboutText() {
-  const db = await getDb();
   const result = await db.getFirstAsync('SELECT about FROM profile WHERE id = 1;');
-  return result?.about ?? null;
+  return result?.about ?? 'Люблю изучать новые языки и программировать на Python. Здесь я собираю свои словари!';
 }
 
 export async function saveAboutText(text) {
-  const db = await getDb();
   return await db.runAsync(
     'INSERT OR REPLACE INTO profile (id, about) VALUES (1, ?);',
     [text]

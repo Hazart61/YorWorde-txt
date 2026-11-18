@@ -5,8 +5,14 @@ import { dictionaryFromRow, DEFAULT_DICTIONARY_EMOJI } from '../../models/Dictio
 export const DictionaryRepository = {
   /** @returns {Promise<import('../../models/Dictionary').Dictionary[]>} */
   async getAll() {
-    const rows = await db.getAllDictionariesWithWordCount();
-    return rows.map(dictionaryFromRow);
+    const rows = await db.getAllDictionaries();
+    const withCounts = await Promise.all(
+      rows.map(async (row) => ({
+        ...row,
+        word_count: await db.getWordCountByDictionary(row.id),
+      }))
+    );
+    return withCounts.map(dictionaryFromRow);
   },
 
   /**

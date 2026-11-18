@@ -4,7 +4,8 @@ import { WordRepository } from '../src/data/repositories/WordRepository';
 import * as db from '../src/data/local/database';
 
 jest.mock('../src/data/local/database', () => ({
-  getAllDictionariesWithWordCount: jest.fn(),
+  getAllDictionaries: jest.fn(),
+  getWordCountByDictionary: jest.fn(),
   addDictionary: jest.fn(),
   addWord: jest.fn(),
   getWordsByDictionary: jest.fn(),
@@ -14,9 +15,10 @@ beforeEach(() => jest.clearAllMocks());
 
 describe('DictionaryRepository', () => {
   it('маппит строки SQLite в сущности Dictionary', async () => {
-    db.getAllDictionariesWithWordCount.mockResolvedValue([
-      { id: 1, title: 'English', description: null, color: '#fff', emoji: '📘', created_at: 10, word_count: 4 },
+    db.getAllDictionaries.mockResolvedValue([
+      { id: 1, title: 'English', description: null, color: '#fff', emoji: '📘', created_at: 10 },
     ]);
+    db.getWordCountByDictionary.mockResolvedValue(4);
 
     const list = await DictionaryRepository.getAll();
 
