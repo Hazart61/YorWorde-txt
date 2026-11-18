@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as NavigationBar from 'expo-navigation-bar';
+import { NavigationBar } from 'expo-navigation-bar';
 import { useTheme } from '../../theme/ThemeContext';
 
 const ICONS = {
@@ -17,19 +17,12 @@ export default function BottomNav({ tabs, activeKey, onTabPress }) {
 
   const styles = createStyles(colors, insets);
 
-  // Меняем цвет системной панели навигации (только Android)
-  useEffect(() => {
-    if (Platform.OS === 'android') {
-      // Устанавливаем цвет фона панели в цвет нашей темы
-      NavigationBar.setBackgroundColorAsync(colors.surface);
-      
-      // Устанавливаем цвет кнопок (темные на светлой теме, светлые на темной)
-      NavigationBar.setButtonStyleAsync(isDark ? 'light' : 'dark');
-    }
-  }, [isDark, colors.surface]);
-
   return (
     <View style={styles.bar}>
+      {/* Цвет кнопок системной панели навигации (Android).
+          В expo-navigation-bar 57 нет setBackgroundColorAsync/setButtonStyleAsync —
+          их вызов и давал «undefined is not a function». */}
+      {Platform.OS === 'android' && <NavigationBar style={isDark ? 'dark' : 'light'} />}
       {tabs.map((tab) => {
         const isActive = tab.key === activeKey;
         return (
